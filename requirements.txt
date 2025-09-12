@@ -1,0 +1,8 @@
+transformers>=4.42.0
+datasets>=3.0.0
+evaluate>=0.4.2
+sacrebleu>=2.4.2
+sentencepiece>=0.1.99
+accelerate>=0.32.0
+numpy>=1.24
+tensorboard

@@ -1,0 +1,14 @@
+[project]
+name = "sequence2sequence-transformer-translation"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "accelerate>=0.32.0",
+    "datasets>=3.0.0",
+    "evaluate>=0.4.2",
+    "numpy>=1.24",
+    "sacrebleu>=2.4.2",
+    "sentencepiece>=0.1.99",
+    "tensorboard>=2.20.0",
+    "transformers>=4.42.0",
+]

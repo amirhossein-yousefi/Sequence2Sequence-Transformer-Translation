@@ -1,0 +1,32 @@
+{'eval_loss': 1.8826267719268799, 'eval_bleu': 23.413910833797836, 'eval_chrf': 48.19943824231342, 'eval_gen_len': 30.271774020971538, 'eval_runtime': 316.9502, 'eval_samples_per_second': 14.744, 'eval_steps_per_second': 1.846, 'epoch': 3.0}
+100%|██████████| 31548/31548 [40:43<00:00, 21.46it/s]
+100%|██████████| 585/585 [05:16<00:00,  2.35it/s]
+                                                 There were missing keys in the checkpoint model loaded: ['model.encoder.embed_tokens.weight', 'model.encoder.embed_positions.weight', 'model.decoder.embed_tokens.weight', 'model.decoder.embed_positions.weight', 'lm_head.weight'].
+{'train_runtime': 2445.3601, 'train_samples_per_second': 103.203, 'train_steps_per_second': 12.901, 'train_loss': 1.8542361338661244, 'epoch': 3.0}
+TrainOutput(global_step=31548, training_loss=1.8542361338661244, metrics={'train_runtime': 2445.3601, 'train_samples_per_second': 103.203, 'train_steps_per_second': 12.901, 'total_flos': 4945267999309824.0, 'train_loss': 1.8542361338661244, 'epoch': 3.0})
+100%|██████████| 31548/31548 [40:45<00:00, 12.90it/s]
+100%|██████████| 585/585 [05:15<00:00,  1.85it/s]
+Validation: {'eval_loss': 1.8826267719268799, 'eval_bleu': 23.413910833797836, 'eval_chrf': 48.19943824231342, 'eval_gen_len': 30.271774020971538, 'eval_runtime': 316.185, 'eval_samples_per_second': 14.779, 'eval_steps_per_second': 1.85, 'epoch': 3.0}
+100%|██████████| 585/585 [05:17<00:00,  1.84it/s]
+Test: {'test_loss': 1.8585453033447266, 'test_bleu': 23.41025135531204, 'test_chrf': 48.21087777315016, 'test_gen_len': 29.877406931964057, 'test_runtime': 318.3784, 'test_samples_per_second': 14.681, 'test_steps_per_second': 1.837, 'epoch': 3.0}
+100%|██████████| 1/1 [00:00<00:00, 15.62it/s]
+
+[0] SRC: All around, the lonely sea extended to the limits of the horizon.
+    REF: Todo alrededor del mar, absolutamente desierto, se extendía hasta los límites del cielo.
+    HYP: En torno suyo, el mar solitario se extendía hasta los límites del horizonte.
+
+[1] SRC: "With all due respect to master, they don't strike me as very wicked!"
+    REF: No me parecen muy feroces.
+    HYP: -A mí no me parecen muy malos, con el debido respeto al señor.
+
+[2] SRC: "Greenland!" said he.
+    REF: —Groenlandia —me dijo.
+    HYP: -¡Groenland! -dijo-.
+
+[3] SRC: To put the peasant to the proof Levin ordered the carts on which the hay was being moved to be fetched, and one of the stacks to be carried to the barn.
+    REF: Para desenmascarar a los labriegos, mandó llamar a los carros que habían transportado el heno, ordenó que se cargase un almiar y se llevase a la era.
+    HYP: Para probar al labrador, Levin ordenó que se llevasen los carros en los que se movía el heno y que se llevasen al pajar uno de los establos.
+
+[4] SRC: And the two brave men gave three tremendous cheers in honor of their island!
+    REF: Y los dos honrados colonos lanzaron tres formidables hurras en honor de la isla.
+    HYP: ¡Y los dos valientes dieron tres hurras enormes en honor de su isla!

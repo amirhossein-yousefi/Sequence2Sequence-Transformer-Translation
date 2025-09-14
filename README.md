@@ -17,10 +17,10 @@
 
 ## 🚀 Model on Hugging Face
 
-[![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Speech--Intensity--Whisper-yellow.svg)](https://huggingface.co/Amirhossein75/speech-intensity-whisper)
+[![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Seq2Seq--Translation-yellow.svg)](https://huggingface.co/Amirhossein75/Sequence2Sequence-Transformer-Translation-Opus-MT)
 
 <p align="center">
-  <a href="https://huggingface.co/Amirhossein75/speech-intensity-whisper">
+  <a href="https://huggingface.co/Amirhossein75/Sequence2Sequence-Transformer-Translation-Opus-MT">
     <img src="https://img.shields.io/badge/🤗%20View%20on%20Hugging%20Face-blueviolet?style=for-the-badge" alt="Hugging Face Repo">
   </a>
 </p>
@@ -123,7 +123,7 @@ args = TrainingArguments(
     weight_decay=cfg.weight_decay,
     gradient_accumulation_steps=cfg.gradient_accumulation_steps,
     logging_steps=cfg.logging_steps,
-    evaluation_strategy=cfg.evaluation_strategy,
+    eval_strategy=cfg.evaluation_strategy,
     save_strategy=cfg.save_strategy,
     save_total_limit=cfg.save_total_limit,
     predict_with_generate=cfg.predict_with_generate,
@@ -246,13 +246,250 @@ The following plot shows the validation loss progression:
 
 - **Total FLOPs (training):** `4,945,267,757,416,448`  
 - **Training runtime:** `2,449.291` seconds  
-- **Logging:** TensorBoard-compatible logs in `mt_en_es_marian/logs`  
+- **Logging:** TensorBoard-compatible logs in `src/outputs/mt_en_es_marian/logs`  
 
 You can monitor training live with:
 
 ```bash
-tensorboard --logdir mt_en_es_marian/logs
+tensorboard --logdir src/outputs/mt_en_es_marian/logs
 ```
+---
+
+
+![task](https://img.shields.io/badge/Task-Machine%20Translation-informational)
+![bleu](https://img.shields.io/badge/BLEU-23.41-blue)
+![chrf](https://img.shields.io/badge/chrF-48.20-blueviolet)
+![epoch](https://img.shields.io/badge/Epochs-3-brightgreen)
+![framework](https://img.shields.io/badge/Framework-Transformers%20%2B%20PyTorch-lightgrey)
+
+A transformer-based **encoder–decoder** sequence-to-sequence model was trained for **English → Spanish** translation.
+This README summarizes training, evaluation, test metrics, qualitative samples, and how to reproduce or use the model.
+
+---
+
+## ✨ Eval/Test metric
+
+- **BLEU (val/test):** 23.41 / 23.41  
+- **chrF (val/test):** 48.20 / 48.21  
+- **Loss (train/val/test):** 1.854 / 1.883 / 1.859  
+- **Avg generation length (val/test):** 30.27 / 29.88 tokens  
+- **Throughput:** train ≈ 12.90 steps/s · val ≈ 1.85 steps/s · test ≈ 1.84 steps/s  
+- **Wall-clock:** train 40:45 · val 5:16 · test 5:18  
+
+> Takeaway: the model produces fluent Spanish with moderate adequacy; BLEU ≈ 23.4 and chrF ≈ 48.2 indicate consistent performance across validation and test.
+
+---
+
+## 📊 Results
+
+### Aggregate Metrics
+
+| Split | Loss | BLEU | chrF | Gen Len | Runtime | Samples/s | Steps/s |
+|:-----:|-----:|-----:|-----:|--------:|--------:|----------:|--------:|
+| Train | 1.854 | — | — | — | 40:45 | 103.203 | 12.901 |
+| Val   | 1.883 | 23.414 | 48.199 | 30.27 | 5:16 | 14.779 | 1.850 |
+| Test  | 1.859 | 23.410 | 48.211 | 29.88 | 5:18 | 14.681 | 1.837 |
+
+**Metrics definitions**  
+- **BLEU / chrF:** quality w.r.t. references (higher is better).  
+- **Gen Len:** average generated sequence length.  
+- **Throughput:** samples/steps per second reported by the trainer.
+
+---
+
+## 🔎 Qualitative Samples (EN → ES)
+
+**[0]**  
+**SRC:** All around, the lonely sea extended to the limits of the horizon.  
+**REF:** Todo alrededor del mar, absolutamente desierto, se extendía hasta los límites del cielo.  
+**HYP:** En torno suyo, el mar solitario se extendía hasta los límites del horizonte.
+
+**[1]**  
+**SRC:** "With all due respect to master, they don't strike me as very wicked!"  
+**REF:** No me parecen muy feroces.  
+**HYP:** -A mí no me parecen muy malos, con el debido respeto al señor.
+
+**[2]**  
+**SRC:** "Greenland!" said he.  
+**REF:** —Groenlandia —me dijo.  
+**HYP:** -¡Groenland! -dijo-.
+
+**[3]**  
+**SRC:** To put the peasant to the proof Levin ordered the carts on which the hay was being moved to be fetched, and one of the stacks to be carried to the barn.  
+**REF:** Para desenmascarar a los labriegos, mandó llamar a los carros que habían transportado el heno, ordenó que se cargase un almiar y se llevase a la era.  
+**HYP:** Para probar al labrador, Levin ordenó que se llevasen los carros en los que se movía el heno y que se llevasen al pajar uno de los establos.
+
+**[4]**  
+**SRC:** And the two brave men gave three tremendous cheers in honor of their island!  
+**REF:** Y los dos honrados colonos lanzaron tres formidables hurras en honor de la isla.  
+**HYP:** ¡Y los dos valientes dieron tres hurras enormes en honor de su isla!
+
+
+---
+
+## 🚀 Quickstart (Inference)
+
+```python
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+
+# 1) Replace with your checkpoint directory or Hub repo id
+ckpt = "path/to/your-checkpoint"  # e.g., "username/en-es-seq2seq"
+
+tok = AutoTokenizer.from_pretrained(ckpt, use_fast=True)
+model = AutoModelForSeq2SeqLM.from_pretrained(ckpt)
+
+def translate(texts, max_new_tokens=64, num_beams=4):
+    inputs = tok(texts, return_tensors="pt", padding=True, truncation=True)
+    outputs = model.generate(**inputs, max_new_tokens=max_new_tokens, num_beams=num_beams)
+    return tok.batch_decode(outputs, skip_special_tokens=True)
+
+print(translate(["All around, the lonely sea extended to the limits of the horizon."]))
+```
+
+---
+
+## 🧪 Repro & Evaluation
+
+```bash
+# Install (pin versions as needed for your stack)
+pip install torch transformers evaluate sacrebleu
+
+# Evaluate with SacreBLEU (example)
+python - <<'PY'
+from sacrebleu import corpus_bleu, corpus_chrf
+refs = [["Todo alrededor del mar, absolutamente desierto, se extendía hasta los límites del cielo."]]
+hyps = ["En torno suyo, el mar solitario se extendía hasta los límites del horizonte."]
+print("BLEU:", corpus_bleu(hyps, refs).score)
+print("chrF:", corpus_chrf(hyps, refs).score)
+PY
+```
+
+### ✅ TL;DR
+- **Model**: `Helsinki-NLP/opus-mt-en-es` *(auto when `model_name=None`)*  
+- **Dataset**: `opus_books` *(config: `en-es`)*  
+- **Seed**: `42`  
+- **Precision**: `fp16 = auto (True if CUDA)`, `bf16 = False`  
+- **Output dir**: `outputs/mt_en_es_marian`
+
+> ℹ️ “Auto” fields are resolved by `TrainConfig.resolve()` at runtime (e.g., `model_name`, `dataset_config`, paths, and `WANDB_DISABLED=true`).
+
+---
+
+### 🔧 Hyperparameters (by group)
+
+#### Languages & Model
+| Setting     | Value / Behavior |
+|-------------|-------------------|
+| `src_lang`  | `en` |
+| `tgt_lang`  | `es` |
+| `model_name`| `None` ⇒ resolves to `Helsinki-NLP/opus-mt-en-es` |
+| `dataset_name` | `opus_books` |
+| `dataset_config` | `None` ⇒ resolves to `en-es` |
+
+#### Tokenization
+| Setting          | Value |
+|------------------|-------|
+| `max_source_len` | `128` |
+| `max_target_len` | `128` |
+
+#### Optimization
+| Setting                        | Value |
+|--------------------------------|-------|
+| `batch_size`                   | `8` |
+| `num_epochs`                   | `3` |
+| `learning_rate`                | `5e-5` |
+| `weight_decay`                 | `0.01` |
+| `gradient_accumulation_steps`  | `1` |
+| `seed`                         | `42` |
+
+#### Generation / Trainer
+| Setting                  | Value |
+|--------------------------|-------|
+| `predict_with_generate`  | `True` |
+| `generation_max_length`  | `128` |
+| `evaluation_strategy`    | `epoch` |
+| `save_strategy`          | `epoch` |
+| `logging_steps`          | `50` |
+| `save_total_limit`       | `2` |
+| `metric_for_best_model`  | `bleu` |
+| `greater_is_better`      | `True` |
+| `report_to`              | `["tensorboard"]` |
+
+#### Mixed Precision
+| Setting | Value / Behavior |
+|---------|-------------------|
+| `fp16`  | **auto** ⇒ `True` if `torch.cuda.is_available()`; `False` otherwise |
+| `bf16`  | `False` (enable on supported hardware if desired) |
+
+#### I/O & Workflow
+| Setting       | Value / Behavior |
+|---------------|-------------------|
+| `output_dir`  | `None` ⇒ resolves to `outputs/mt_en_es_marian` |
+| `logging_dir` | `None` ⇒ resolves to `outputs/mt_en_es_marian/logs` |
+| `do_train`    | `True` |
+| `do_eval`     | `True` |
+| `do_predict`  | `True` |
+
+---
+
+### 🧬 Resolved defaults (assuming **no CLI overrides**)
+
+```json
+{
+  "src_lang": "en",
+  "tgt_lang": "es",
+  "model_name": "Helsinki-NLP/opus-mt-en-es",
+  "dataset_name": "opus_books",
+  "dataset_config": "en-es",
+  "max_source_len": 128,
+  "max_target_len": 128,
+  "batch_size": 8,
+  "num_epochs": 3,
+  "learning_rate": 5e-5,
+  "weight_decay": 0.01,
+  "gradient_accumulation_steps": 1,
+  "seed": 42,
+  "predict_with_generate": true,
+  "generation_max_length": 128,
+  "evaluation_strategy": "epoch",
+  "save_strategy": "epoch",
+  "logging_steps": 50,
+  "save_total_limit": 2,
+  "metric_for_best_model": "bleu",
+  "greater_is_better": true,
+  "report_to": ["tensorboard"],
+  "fp16": "auto (True if CUDA, else False)",
+  "bf16": false,
+  "output_dir": "outputs/mt_en_es_marian",
+  "logging_dir": "outputs/mt_en_es_marian/logs",
+  "do_train": true,
+  "do_eval": true,
+  "do_predict": true,
+  "WANDB_DISABLED": "true (set in code)"
+}
+```
+
+> Note: `fp16` is **environment‑dependent** by default. If you need an explicit setting for cross‑machine reproducibility, see the commands below.
+
+---
+
+### 🧪 Exact reproduction commands
+
+> Use **one** of the following. If you ran with custom flags, copy your values into these commands.
+
+#### 1) GPU (FP16) — match defaults explicitly
+```bash
+python -m src.train   --src_lang en --tgt_lang es   --dataset_name opus_books --dataset_config en-es   --max_source_len 128 --max_target_len 128   --batch_size 8 --num_epochs 3   --learning_rate 5e-5 --weight_decay 0.01   --gradient_accumulation_steps 1 --seed 42   --generation_max_length 128   --evaluation_strategy epoch --save_strategy epoch   --logging_steps 50 --save_total_limit 2   --metric_for_best_model bleu   --fp16   --output_dir outputs/mt_en_es_marian   --logging_dir outputs/mt_en_es_marian/logs   --do_train --do_eval --do_predict
+```
+
+#### 2) CPU (no mixed precision)
+```bash
+python -m src.train   --src_lang en --tgt_lang es   --dataset_name opus_books --dataset_config en-es   --max_source_len 128 --max_target_len 128   --batch_size 8 --num_epochs 3   --learning_rate 5e-5 --weight_decay 0.01   --gradient_accumulation_steps 1 --seed 42   --generation_max_length 128   --evaluation_strategy epoch --save_strategy epoch   --logging_steps 50 --save_total_limit 2   --metric_for_best_model bleu   --output_dir outputs/mt_en_es_marian   --logging_dir outputs/mt_en_es_marian/logs   --do_train --do_eval --do_predict
+```
+
+> ⚠️ Because `--fp16`/`--bf16` are `store_true` flags, you **cannot** explicitly pass `False` via CLI. To force `fp16=False` on a CUDA machine, remove `--fp16` and ensure the default in code does not auto‑enable it, or edit the argument to accept explicit booleans.
+
+---
 
 
 ## 🧠 Background & design notes

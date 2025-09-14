@@ -37,8 +37,10 @@
 - **Trainer‑first ergonomics**: uses Hugging Face **Trainer** & **TrainingArguments** for robust, reproducible training.  
 - **Clean module layout** you can understand at a glance and modify safely.
 
+
+## Repo Structure
 ```
-.
+
 ├── src/
 │   ├── __init__.py
 │   ├── config.py        # TrainConfig dataclass (defaults, device, dirs)
@@ -47,6 +49,13 @@
 │   ├── model.py         # model/tokenizer/data collator loaders
 │   ├── predict.py       # pretty printed sample predictions
 │   └── train.py         # end-to-end training pipeline (HF Trainer)
+├──sagemaker/
+│   ├── train_sagemaker.py     # training entry point (runs inside HF DLC)
+│   ├── inference.py           # custom inference handler for endpoints
+│   ├── launch_training.py     # submit a remote SageMaker training job
+│   ├── deploy_endpoint.py     # stand up a real-time endpoint
+│   ├── test_invoke.py         # send a test request to the endpoint
+│   └── batch_transform.py     # offline inference over .jsonl files
 ├── requirements.txt
 ├── pyproject.toml
 └── uv.lock              # optional: reproducible installs via uv
@@ -537,11 +546,128 @@ A: Create a small 🤗 Datasets `Dataset` with a `translation` column and your l
 
 ---
 
-## 📝 Requirements
+# SageMaker: Train, Deploy, and Inference
 
-- Python **3.13+**  
-- `transformers>=4.42.0`, `datasets>=3.0.0`, `evaluate>=0.4.2`, `sacrebleu>=2.4.2`, `sentencepiece>=0.1.99`, `accelerate>=0.32.0`, `numpy>=1.24`, `tensorboard`  
-(see `requirements.txt` / `pyproject.toml`)
+This add‑on lets you **train** the translation model on Amazon SageMaker, **deploy** it as a real‑time endpoint (or **Batch Transform**), and **invoke** it with a simple JSON schema — without changing the repo’s core code.
+
+> Works with the repo’s default MarianMT‑based English→Spanish setup but also supports other language pairs and checkpoints.
+
+---
+
+## What include
+
+- **Training** uses the Hugging Face DLC for PyTorch and saves artifacts to `/opt/ml/model` (`SM_MODEL_DIR`), which SageMaker exports to S3 automatically.
+- **Real‑time inference** uses either:
+  - the **custom handler** in `sagemaker/inference.py` (recommended for consistent translation schema), or
+  - the default **HF pipeline** by setting `HF_TASK=translation`.
+- **Batch Transform** consumes JSON Lines (`.jsonl`) inputs for large offline jobs.
+
+> The DLC versions referenced here match Hugging Face’s current public list of available Docker images (training on Transformers **4.49.0**, inference on **4.51.3**). See the official tables for the latest URIs and versions. citeturn12view0
+
+---
+
+## Prerequisites
+
+- An AWS account with SageMaker permissions and an **execution role ARN**.
+- The **SageMaker Python SDK** installed *locally or in SageMaker Studio*:
+
+```bash
+pip install --upgrade sagemaker boto3
+```
+
+- (Optional) If you’ll launch jobs from your laptop, configure `awscli` with credentials.
+
+> SageMaker passes key paths and configuration via environment variables like `SM_MODEL_DIR` and `SM_CHANNEL_*`, and forwards hyperparameters as CLI args to your script. Transformers’ `Trainer` will save the model under `/opt/ml/model` so SageMaker can package it as `model.tar.gz`.
+
+---
+
+## 1) Launch a training job
+
+Run from the **repo root** (so `src/` is included):
+
+```bash
+python sagemaker/launch_training.py \
+  --role arn:aws:iam::<ACCOUNT_ID>:role/<YourSageMakerExecutionRole> \
+  --bucket <your-sagemaker-bucket> \
+  --instance-type ml.g5.2xlarge \
+  --job-name mt-en-es-$(date +%Y%m%d-%H%M) \
+  --src-lang en --tgt-lang es \
+  --epochs 3 --train-batch-size 8 --eval-batch-size 8
+```
+
+What this does:
+
+- Creates a `HuggingFace` **Estimator** and sends the code to a managed training container (Transformers **4.49.0**, PyTorch **2.5**, Python **3.11**).
+- Runs `sagemaker/train_sagemaker.py`, which imports your repo’s `src/` modules and trains via the HF `Trainer`.
+- Saves final artifacts to `/opt/ml/model` so SageMaker uploads them to S3 (you’ll see the S3 path in the logs). citeturn15view0
+
+Hyperparameters you can override include: `--model-name`, `--dataset-name`, `--dataset-config`, `--epochs`, `--train-batch-size`, `--lr`, `--grad-accum`, `--gen-max-len`, and more (see the launcher script).
+
+---
+
+## 2) Deploy a real‑time endpoint
+
+**Option A: from a training job** (recommended, uses that job’s `model.tar.gz` automatically):
+
+```bash
+python sagemaker/deploy_endpoint.py \
+  --from-training <training-job-name> \
+  --endpoint-name translate-en-es \
+  --instance-type ml.m5.xlarge
+```
+
+**Option B: from an S3 artifact** (`model.tar.gz`):
+
+```bash
+python sagemaker/deploy_endpoint.py \
+  --model-data s3://<bucket>/path/to/model.tar.gz \
+  --endpoint-name translate-en-es \
+  --instance-type ml.m5.xlarge
+```
+
+By default the script uses our custom handler (`sagemaker/inference.py`) to ensure stable request/response. To use the “zero‑code” HF pipeline instead, add `--use-default-pipeline` (sets `HF_TASK=translation`). See the official docs for both paths and how the inference toolkit resolves tasks.
+
+---
+
+## 3) Invoke the endpoint
+
+```bash
+python sagemaker/test_invoke.py --endpoint-name translate-en-es \
+  --text "The sea extends to the horizon."
+```
+
+**Request (JSON):**
+
+```json
+{
+  "inputs": "The sea extends to the horizon.",
+  "parameters": {"max_new_tokens": 64, "num_beams": 4, "do_sample": false}
+}
+```
+
+**Response:** the standard HF translation output (list of dicts with `translation_text`).
+
+> If you use the custom handler, it implements `model_fn` and `transform_fn` — the recommended hooks supported by the Hugging Face Inference Toolkit inside SageMaker. citeturn6view0
+
+---
+
+## 4) Batch (offline) inference
+
+Prepare a **`.jsonl`** file on S3, one JSON per line:
+
+```text
+{"inputs":"Hello, world!"}
+{"inputs":"How are you?"}
+```
+
+Then run:
+
+```bash
+python sagemaker/batch_transform.py \
+  --model-data s3://<bucket>/path/to/model.tar.gz \
+  --input s3://<bucket>/inputs/translate.jsonl \
+  --output s3://<bucket>/outputs/translate/
+```
 
 ---
 

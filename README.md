@@ -599,7 +599,7 @@ What this does:
 
 - Creates a `HuggingFace` **Estimator** and sends the code to a managed training container (Transformers **4.49.0**, PyTorch **2.5**, Python **3.11**).
 - Runs `sagemaker/train_sagemaker.py`, which imports your repo’s `src/` modules and trains via the HF `Trainer`.
-- Saves final artifacts to `/opt/ml/model` so SageMaker uploads them to S3 (you’ll see the S3 path in the logs). citeturn15view0
+- Saves final artifacts to `/opt/ml/model` so SageMaker uploads them to S3 (you’ll see the S3 path in the logs).
 
 Hyperparameters you can override include: `--model-name`, `--dataset-name`, `--dataset-config`, `--epochs`, `--train-batch-size`, `--lr`, `--grad-accum`, `--gen-max-len`, and more (see the launcher script).
 
